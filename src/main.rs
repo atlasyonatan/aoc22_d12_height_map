@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::time::Instant;
 
 mod graph_path;
 use graph_path::{distances, shortest_path, Direction};
@@ -52,6 +53,9 @@ fn main() {
     }
 
     let count = shape.0 * shape.1;
+    
+    println!("Creating adjecancy matrix.");
+    let timestamp = Instant::now();
     let adjecancy = Array2::from_shape_fn((count, count), |(a, b)| {
         let (x1, y1) = (a % shape.0, a / shape.0);
         let (x2, y2) = (b % shape.0, b / shape.0);
@@ -62,14 +66,20 @@ fn main() {
             false
         }
     });
+    println!("Done {:?}", timestamp.elapsed());
 
     let start_node = start.1 * shape.0 + start.0;
     let end_node = end.1 * shape.0 + end.0;
 
-    println!("part 1:");
-    match shortest_path(&adjecancy, start_node, end_node) {
-        Some(length) => {
-            println!("Found a shortest path of length {}", length);
+    println!("Computing graph distances.");
+    let timestamp = Instant::now();
+    let distances = distances(&adjecancy, end_node, Direction::Backward);
+    println!("Done {:?}", timestamp.elapsed());
+
+    println!("Part 1:");
+    match distances.get(&start_node) {
+        Some(distance) => {
+            println!("Found a shortest path of length {}", distance);
         }
         None => println!("No path"),
     }
@@ -93,8 +103,8 @@ fn main() {
     //     );
     // }
 
-    println!("part 2:");
-    let distances = distances(&adjecancy, end_node, Direction::Backward);
+    println!();
+    println!("Part 2:");
     let mut starting_nodes: Vec<(usize, &usize)> = grid
         .indexed_iter()
         .filter_map(|(position, &height)| {
@@ -112,7 +122,7 @@ fn main() {
     starting_nodes.sort_by_key(|(_, &distance)| distance);
     match starting_nodes.first() {
         Some((node, distance)) => {
-            let (x, y) = (node % shape.0, node / shape.0);
+            let (x, y) = (node / shape.0, node % shape.0);
             println!("Found a nearest starting node: (x: {}, y: {}). Distance from it to end node is {}.",x,y,distance);
         }
         None => println!("No starting points in reach"),
