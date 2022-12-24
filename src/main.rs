@@ -4,9 +4,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-// mod vec2;
-// use vec2::Grid2;
-
 fn main() {
     let path = Path::new("../input.txt");
     let file = File::open(path).unwrap();
@@ -65,6 +62,7 @@ fn main() {
 
     let start_node = start.1 * shape.0 + start.0;
     let end_node = end.1 * shape.0 + end.0;
+
 
     match meet_in_the_middle(adjecancy, start_node, end_node) {
         Some((middle, lengths)) => {
