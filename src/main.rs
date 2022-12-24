@@ -1,8 +1,11 @@
 use ndarray::{self, Array2};
-use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+
+mod graph_path;
+use graph_path::{distances, shortest_path, Direction};
 
 fn main() {
     let path = Path::new("../input.txt");
@@ -63,17 +66,13 @@ fn main() {
     let start_node = start.1 * shape.0 + start.0;
     let end_node = end.1 * shape.0 + end.0;
 
-
-    match meet_in_the_middle(adjecancy, start_node, end_node) {
-        Some((middle, lengths)) => {
-            let total_length = lengths.iter().sum::<usize>();
-            println!("Found a shortest path of length {}", total_length);
-            let (x, y) = (middle % shape.0, middle / shape.0);
-            println!("Path mid point (x: {}, y: {})", x, y);
+    println!("part 1:");
+    match shortest_path(&adjecancy, start_node, end_node) {
+        Some(length) => {
+            println!("Found a shortest path of length {}", length);
         }
         None => println!("No path"),
     }
-
     // let mut adj_pow = Array2::from_diag_elem(count, 1);
     // let mut len = 1;
     // while len <= count {
@@ -93,6 +92,31 @@ fn main() {
     //         paths, plural, len
     //     );
     // }
+
+    println!("part 2:");
+    let distances = distances(&adjecancy, end_node, Direction::Backward);
+    let mut starting_nodes: Vec<(usize, &usize)> = grid
+        .indexed_iter()
+        .filter_map(|(position, &height)| {
+            if height == 'a' {
+                Some(position.1 * shape.0 + position.0)
+            } else {
+                None
+            }
+        })
+        .filter_map(|node| match distances.get(&node) {
+            Some(distance) => Some((node, distance)),
+            None => None,
+        })
+        .collect();
+    starting_nodes.sort_by_key(|(_, &distance)| distance);
+    match starting_nodes.first() {
+        Some((node, distance)) => {
+            let (x, y) = (node % shape.0, node / shape.0);
+            println!("Found a nearest starting node: (x: {}, y: {}). Distance from it to end node is {}.",x,y,distance);
+        }
+        None => println!("No starting points in reach"),
+    }
 }
 
 fn array2_from_vec2<T>(mut input_vec2: Vec<Vec<T>>) -> Array2<T> {
@@ -107,54 +131,4 @@ fn array2_from_vec2<T>(mut input_vec2: Vec<Vec<T>>) -> Array2<T> {
     }
 
     Array2::from_shape_vec((nrows, ncols), data).unwrap()
-}
-
-fn meet_in_the_middle(
-    adjecancy: Array2<bool>,
-    from_node: usize,
-    to_node: usize,
-) -> Option<(usize, [usize; 2])> {
-    let mut visited = HashMap::new();
-    let mut queue = VecDeque::new();
-    queue.push_back((from_node, 0usize, true));
-    queue.push_back((to_node, 0usize, false));
-
-    while let Some((node, length, forward)) = queue.pop_front() {
-        //visit node
-        match visited.entry((node, forward)) {
-            Entry::Occupied(mut entry) => {
-                let current_length = entry.get_mut();
-                if length < *current_length {
-                    *current_length = length;
-                } else {
-                    continue;
-                }
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(length);
-            }
-        }
-
-        //check reached end
-        if let Entry::Occupied(complement) = visited.entry((node, !forward)) {
-            let mut lengths = [length, *complement.get()];
-            if !forward {
-                lengths.reverse();
-            }
-            return Some((node, lengths));
-        }
-
-        //enque neighbors
-        let neighbors = if forward {
-            adjecancy.row(node)
-        } else {
-            adjecancy.column(node)
-        };
-        for (neighbor, &adjecant) in neighbors.into_iter().enumerate() {
-            if adjecant {
-                queue.push_front((neighbor, length + 1, forward))
-            }
-        }
-    }
-    None
 }
