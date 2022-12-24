@@ -16,11 +16,18 @@ impl Direction {
     }
 }
 
-pub fn meet_in_the_middle(
+pub type DistanceMap = HashMap<usize, usize>;
+pub type DirectionMap = HashMap<Direction, DistanceMap>;
+
+pub fn meet_in_the_middle<F>(
     adjecancy: &Array2<bool>,
     nodes: &Vec<(usize, Direction)>,
-    maps: &mut HashMap<Direction, HashMap<usize, usize>>,
-) -> Option<usize> {
+    maps: &mut DirectionMap,
+    until: F,
+) -> Option<usize>
+where
+    F: Fn(&usize, &Direction, &DirectionMap) -> bool,
+{
     let mut queue = VecDeque::new();
     for (node, direction) in nodes {
         queue.push_back((*node, *direction, 0usize))
@@ -43,10 +50,8 @@ pub fn meet_in_the_middle(
         }
 
         //check reached end
-        if let Some(map) = maps.get(&direction.reverse()) {
-            if map.contains_key(&node) {
-                return Some(node);
-            }
+        if until(&node, &direction, &maps) {
+            return Some(node);
         }
 
         //enque neighbors
@@ -63,12 +68,15 @@ pub fn meet_in_the_middle(
     None
 }
 
+#[allow(dead_code)]
 pub fn shortest_path(adjecancy: &Array2<bool>, from: usize, to: usize) -> Option<usize> {
     let nodes = vec![(from, Direction::Forward), (to, Direction::Backward)];
     let mut maps = HashMap::new();
     maps.entry(Direction::Forward).or_default();
     maps.entry(Direction::Backward).or_default();
-    let middle = meet_in_the_middle(adjecancy, &nodes, &mut maps)?;
+    let middle = meet_in_the_middle(adjecancy, &nodes, &mut maps, |node, direction, maps| {
+        maps.get(&direction.reverse()).unwrap().contains_key(node)
+    })?;
     Some(maps.values().map(|map| map.get(&middle).unwrap()).sum())
 }
 
@@ -80,6 +88,6 @@ pub fn distances(
     let nodes = vec![(node, direction)];
     let mut maps = HashMap::new();
     maps.entry(direction).or_default();
-    meet_in_the_middle(adjecancy, &nodes, &mut maps);
+    meet_in_the_middle(adjecancy, &nodes, &mut maps, |_, _, _| false);
     maps.remove(&direction).unwrap()
 }

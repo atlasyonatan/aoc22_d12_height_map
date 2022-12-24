@@ -6,7 +6,7 @@ use std::path::Path;
 use std::time::Instant;
 
 mod graph_path;
-use graph_path::{distances, shortest_path, Direction};
+use graph_path::{distances, Direction};
 
 fn main() {
     let path = Path::new("../input.txt");
@@ -53,7 +53,7 @@ fn main() {
     }
 
     let count = shape.0 * shape.1;
-    
+
     println!("Creating adjecancy matrix.");
     let timestamp = Instant::now();
     let adjecancy = Array2::from_shape_fn((count, count), |(a, b)| {
