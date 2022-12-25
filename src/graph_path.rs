@@ -19,7 +19,6 @@ where
     for (direction, &(node, _)) in search.iter() {
         queue.push_back((node, direction, 0usize));
     }
-    // let mut maps = searches.iter().map(|(_, map)| &map);
     while let Some((node, direction, length)) = queue.pop_front() {
         let map = &mut search.get_mut(direction).unwrap().1;
         match map.entry(node) {

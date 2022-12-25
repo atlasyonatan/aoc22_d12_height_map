@@ -23,14 +23,6 @@ impl<T> BiDirection<T> {
             .filter_map(|direction| Some((direction, self[direction].as_ref()?)))
     }
 
-    // pub fn map<Other, F: Fn(T) -> Other>(self, f: F) -> BiDirection<Other> {
-    //     let f = move |t: Option<T>| Some(f(t?));
-    //     BiDirection {
-    //         forward: f(self.forward),
-    //         backward: f(self.backward),
-    //     }
-    // }
-
     pub fn get(&self, direction: Direction) -> Option<&T> {
         self[direction].as_ref()
     }
