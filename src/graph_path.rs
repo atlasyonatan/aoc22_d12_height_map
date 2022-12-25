@@ -1,46 +1,31 @@
 use ndarray::Array2;
 use std::collections::{hash_map::Entry, HashMap, VecDeque};
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum Direction {
-    Forward,
-    Backward,
-}
-
-impl Direction {
-    pub fn reverse(&self) -> Self {
-        match self {
-            Direction::Forward => Direction::Backward,
-            Direction::Backward => Direction::Forward,
-        }
-    }
-}
+pub mod direction;
+use direction::{BiDirection, Direction, BACKWARD, FORWARD};
 
 pub type DistanceMap = HashMap<usize, usize>;
-pub type DirectionMap = HashMap<Direction, DistanceMap>;
+pub type Search = BiDirection<(usize, DistanceMap)>;
 
 pub fn meet_in_the_middle<F>(
     adjecancy: &Array2<bool>,
-    nodes: &Vec<(usize, Direction)>,
-    maps: &mut DirectionMap,
+    search: &mut Search,
     until: F,
 ) -> Option<usize>
 where
-    F: Fn(&usize, &Direction, &DirectionMap) -> bool,
+    F: Fn(&usize, &Direction, &Search) -> bool,
 {
     let mut queue = VecDeque::new();
-    for (node, direction) in nodes {
-        queue.push_back((*node, *direction, 0usize))
+    for (direction, &(node, _)) in search.iter() {
+        queue.push_back((node, direction, 0usize));
     }
-
+    // let mut maps = searches.iter().map(|(_, map)| &map);
     while let Some((node, direction, length)) = queue.pop_front() {
-        let mapped = maps.get_mut(&direction).unwrap();
-        match mapped.entry(node) {
+        let map = &mut search.get_mut(direction).unwrap().1;
+        match map.entry(node) {
             Entry::Occupied(mut entry) => {
-                let current_length = entry.get_mut();
-                if length < *current_length {
-                    *current_length = length;
-                } else {
+                *entry.get_mut() = (*entry.get()).min(length);
+                if *entry.get() == length {
                     continue;
                 }
             }
@@ -50,14 +35,14 @@ where
         }
 
         //check reached end
-        if until(&node, &direction, &maps) {
+        if until(&node, &direction, &search) {
             return Some(node);
         }
 
         //enque neighbors
         let neighbors = match direction {
-            Direction::Forward => adjecancy.row(node),
-            Direction::Backward => adjecancy.column(node),
+            FORWARD => adjecancy.row(node),
+            BACKWARD => adjecancy.column(node),
         };
         for (neighbor, &adjecant) in neighbors.into_iter().enumerate() {
             if adjecant {
@@ -70,24 +55,29 @@ where
 
 #[allow(dead_code)]
 pub fn shortest_path(adjecancy: &Array2<bool>, from: usize, to: usize) -> Option<usize> {
-    let nodes = vec![(from, Direction::Forward), (to, Direction::Backward)];
-    let mut maps = HashMap::new();
-    maps.entry(Direction::Forward).or_default();
-    maps.entry(Direction::Backward).or_default();
-    let middle = meet_in_the_middle(adjecancy, &nodes, &mut maps, |node, direction, maps| {
-        maps.get(&direction.reverse()).unwrap().contains_key(node)
+    let mut searches = Search {
+        forward: Some((from, DistanceMap::new())),
+        backward: Some((to, DistanceMap::new())),
+    };
+    let middle = meet_in_the_middle(adjecancy, &mut searches, |node, direction, maps| {
+        maps.get(!direction).unwrap().1.contains_key(node)
     })?;
-    Some(maps.values().map(|map| map.get(&middle).unwrap()).sum())
+    Some(
+        searches
+            .iter()
+            .map(|(_, (_, map))| map.get(&middle).unwrap())
+            .sum(),
+    )
 }
 
-pub fn distances(
-    adjecancy: &Array2<bool>,
-    node: usize,
-    direction: Direction,
-) -> HashMap<usize, usize> {
-    let nodes = vec![(node, direction)];
-    let mut maps = HashMap::new();
-    maps.entry(direction).or_default();
-    meet_in_the_middle(adjecancy, &nodes, &mut maps, |_, _, _| false);
-    maps.remove(&direction).unwrap()
+pub fn distances(adjecancy: &Array2<bool>, node: usize, direction: Direction) -> DistanceMap {
+    let mut searches = BiDirection::new();
+    searches[direction] = Some((node, DistanceMap::new()));
+    meet_in_the_middle(adjecancy, &mut searches, |_, _, _| false);
+    match direction {
+        FORWARD => searches.forward,
+        BACKWARD => searches.backward,
+    }
+    .unwrap()
+    .1
 }

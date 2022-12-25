@@ -6,7 +6,7 @@ use std::path::Path;
 use std::time::Instant;
 
 mod graph_path;
-use graph_path::{distances, Direction};
+use graph_path::{direction::BACKWARD, distances};
 
 fn main() {
     let path = Path::new("../input.txt");
@@ -73,7 +73,7 @@ fn main() {
 
     println!("Computing graph distances.");
     let timestamp = Instant::now();
-    let distances = distances(&adjecancy, end_node, Direction::Backward);
+    let distances = distances(&adjecancy, end_node, BACKWARD);
     println!("Done {:?}", timestamp.elapsed());
 
     println!("Part 1:");
