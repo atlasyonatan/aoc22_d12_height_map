@@ -6,7 +6,7 @@ use std::path::Path;
 use std::time::Instant;
 
 mod graph_path;
-use graph_path::{direction::BACKWARD, distances};
+use graph_path::{direction::BACKWARD};
 
 fn main() {
     let path = Path::new("../input.txt");
